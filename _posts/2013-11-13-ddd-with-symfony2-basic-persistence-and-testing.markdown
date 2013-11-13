@@ -45,17 +45,24 @@ use Acme\CoreDomain\User\User;
 use Acme\CoreDomain\User\UserId;
 use Acme\CoreDomain\User\UserRepository;
 use Symfony\Component\Filesystem\Filesystem;
-use Symfony\Component\Yaml\Yaml;
+use Symfony\Component\Yaml\Parser;
+use Symfony\Component\Yaml\Dumper;
 
 class YamlUserRepository implements UserRepository
 {
     private $filename;
+    private $fs;
+    private $yamlParser;
+    private $yamlDumper;
 
-    public function __construct($filename)
+    public function __construct($filename, Filesystem $fs, Parser $yamlParser, Dumper $yamlDumper)
     {
-        $this->filename = $filename;
+        $this->filename     = $filename;
+        $this->fs           = $fs;
+        $this->yamlParser   = $yamlParser;
+        $this->yamlDumper   = $yamlDumper;
 
-        (new Filesystem())->touch($this->filename);
+        $fs->touch($this->filename);
     }
 
     /**
@@ -69,7 +76,7 @@ class YamlUserRepository implements UserRepository
             }
         }
 
-        return null;
+        return new User($userId, null, null);
     }
 
     /**
@@ -109,7 +116,7 @@ class YamlUserRepository implements UserRepository
             'last_name'  => $user->getLastName(),
         );
 
-        file_put_contents($this->filename, Yaml::dump($rows));
+        $this->fs->dumpFile($this->filename, $this->yamlDumper->dump($rows));
     }
 
     /**
@@ -126,12 +133,12 @@ class YamlUserRepository implements UserRepository
             $rows[] = $row;
         }
 
-        file_put_contents($this->filename, Yaml::dump($rows));
+        $this->fs->dumpFile($this->filename, $this->yamlDumper->dump($rows));
     }
 
     private function getRows()
     {
-        return Yaml::parse($this->filename) ?: array();
+        return $this->yamlParser->parse($this->filename) ?: array();
     }
 }
 ```
